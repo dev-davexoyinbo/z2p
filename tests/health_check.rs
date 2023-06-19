@@ -7,7 +7,13 @@ use z2p::configuration::get_configuration;
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Unable to bind address");
     let port = listener.local_addr().unwrap().port();
-    let server = z2p::startup::run(listener).expect("Failed to bind address");
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let connection_string = configuration.database.connection_string();
+    let connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Unable to connect to postgres");
+    
+    let server = z2p::startup::run(listener, connection).expect("Failed to bind address");
 
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
