@@ -1,6 +1,8 @@
 use std::net::TcpListener;
 
 use reqwest;
+use sqlx::{Connection, PgConnection};
+use z2p::configuration::get_configuration;
 
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Unable to bind address");
@@ -32,6 +34,12 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let addr = spawn_app();
     let client = reqwest::Client::new();
 
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let connection_string = configuration.database.connection_string();
+    let mut connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Unable to connect to the postgres database");
+
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
         .post(&format!("{}/subscriptions", addr))
@@ -43,6 +51,14 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
     assert!(response.status().is_success());
     assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch data from database");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 } //end fn
 
 #[actix_web::test]
@@ -65,6 +81,11 @@ async fn subscribe_returns_a_400_if_data_is_missing() {
             .await
             .expect("Failed to execute request");
 
-        assert_eq!(400, response.status().as_u16(), "The API did not fail with 400 Bad Request when the payload was {}.", error_message);
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        );
     }
 } //end fn
