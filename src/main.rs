@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use sqlx::{Connection, PgConnection, PgPool};
+use sqlx::{Connection, PgPool};
 use z2p::{configuration::get_configuration, startup};
 
 #[actix_web::main]
@@ -10,7 +10,7 @@ async fn main() -> std::io::Result<()> {
     let connection_pool = PgPool::connect(&connection_string)
         .await
         .expect("Unable to connect to postgres");
-    let listener = TcpListener::bind(&format!("127.0.0.1:{}", configuration.application_port))
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", configuration.application_port))
         .expect("Unable to bind address");
     startup::run(listener, connection_pool)?.await
 } //end main method
