@@ -1,7 +1,7 @@
 use std::net::TcpListener;
 
-use sqlx::{PgPool, PgConnection, Connection, Executor};
-use z2p::configuration::{get_configuration, DatabaseSettings};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use z2p::{configuration::{get_configuration, DatabaseSettings}, get_subscriber, init_subscriber};
 
 pub struct TestApp {
     pub address: String,
@@ -9,6 +9,8 @@ pub struct TestApp {
 }
 
 async fn spawn_app() -> TestApp {
+    let subscriber = get_subscriber("test".into(), "debug".into());
+    init_subscriber(subscriber);
     let listener = TcpListener::bind("127.0.0.1:0").expect("Unable to bind address");
     let port = listener.local_addr().unwrap().port();
     let mut configuration = get_configuration().expect("Failed to read configuration");
