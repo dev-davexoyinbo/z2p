@@ -1,5 +1,6 @@
-use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
+use actix_web::{dev::Server, web, App, HttpServer};
 use sqlx::PgPool;
+use tracing_actix_web::TracingLogger;
 use std::{io, net::TcpListener};
 
 use crate::routes;
@@ -8,7 +9,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, io::Error> 
     let db_pool = web::Data::new(db_pool);
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
+            .wrap(TracingLogger::default())
             .route(
                 "/health_check",
                 web::get().to(routes::health_check::health_check),
