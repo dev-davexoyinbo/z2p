@@ -1,7 +1,7 @@
-use std::net::TcpListener;
+use std::{net::TcpListener, time::Duration};
 
 use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use z2p::{configuration::get_configuration, get_subscriber, init_subscriber, startup};
 
 #[actix_web::main]
@@ -11,7 +11,9 @@ async fn main() -> std::io::Result<()> {
 
     let configuration = get_configuration().expect("Failed to read configuration");
     let connection_string = configuration.database.connection_string();
-    let connection_pool = PgPool::connect_lazy(&connection_string.expose_secret())
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(Duration::from_secs(2))
+        .connect_lazy(&connection_string.expose_secret())
         .expect("Failed to create Postgres connection pool.");
     let listener = TcpListener::bind(format!(
         "{}:{}",

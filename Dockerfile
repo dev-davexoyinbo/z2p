@@ -1,15 +1,28 @@
-FROM rust:1.70
+# Builder stage
+FROM rust:1.70 AS builder
 
 WORKDIR /app
-
-# Install the required system dependencies for our linking configuration
 RUN apt update && apt install lld clang -y
-
-# Copy all files from our working environment to our Docker image
 COPY . .
-
 ENV SQLX_OFFLINE true
 RUN cargo build --release
 
-ENTRYPOINT [ "./target/release/z2p" ]
+# Runtime stage
+FROM debian:bullseye-slim AS runtime
+WORKDIR /app
+# Install OpenSSL - it is dynamically linked by some of our dependencies
+# Install ca-certificates - it is needed to verify TLS certificates
+# when establishing HTTPS connections
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    # Clean up
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/z2p z2p
+COPY configuration configuration
+ENV APP_ENVIRONMENT production
+
+ENTRYPOINT [ "./z2p" ]
 
